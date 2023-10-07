@@ -1,0 +1,1 @@
+# sebeszeti_eszk_sebesseg_merese
