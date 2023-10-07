@@ -1,61 +1,53 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
-# Videó beolvasása
-video_path = 'path_to_your_video.mp4'  # Cseréld le a videó elérési útvonalára
-cap = cv2.VideoCapture(video_path)
+# Képsorozat elérési útvonala (a képeknek ugyanazt a könyvtárat kell tartalmazniuk)
+image_sequence_path = 'images'  # Cseréld le a képsorozat könyvtárának elérési útvonalára
 
-# Ellenőrizd, hogy a videó megnyílt-e
-if not cap.isOpened():
-    print("Hiba: A videó nem nyitható meg.")
+# Ellenőrizzük, hogy az elérési útvonal létezik-e
+if not os.path.exists(image_sequence_path):
+    print("Hiba: A megadott elérési útvonal nem létezik.")
     exit()
 
-# Első képkocka beolvasása és inicializálása
-ret, prev_frame = cap.read()
-prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-prev_points = cv2.goodFeaturesToTrack(prev_gray, maxCorners=100, qualityLevel=0.01, minDistance=10)
-
-# Sebességadatok tárolásához listák inicializálása
+# Képek beolvasása a sorozatból és sebességkiszámítás
 velocities_x = []
 velocities_y = []
 
-# Az első 10 képkocka feldolgozása
-for i in range(10):
-    ret, frame = cap.read()
-    if not ret:
-        break
+# Képsorozat feldolgozása
+image_files = sorted(os.listdir(image_sequence_path))
+prev_image = None
 
+for image_file in image_files:
+    # Kép beolvasása
+    image_path = os.path.join(image_sequence_path, image_file)
+    frame = cv2.imread(image_path)
+    if frame is None:
+        continue
+
+    # Szürkeárnyalatos konverzió
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Optikai áramlás kiszámítása
-    curr_points, status, _ = cv2.calcOpticalFlowPyrLK(prev_gray, frame_gray, prev_points, None)
+    # Az optikai áramlás kiszámítása a képeken
+    if prev_image is not None:
+        flow = cv2.calcOpticalFlowFarneback(prev_image, frame_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        vx = np.mean(flow[..., 0])
+        vy = np.mean(flow[..., 1])
+        velocities_x.append(vx)
+        velocities_y.append(vy)
 
-    # Sebességek kiszámítása
-    velocities = curr_points - prev_points
-    vx, vy = np.mean(velocities, axis=0)
-
-    # Sebességek hozzáadása a listákhoz
-    velocities_x.append(vx)
-    velocities_y.append(vy)
-
-    # Az aktuális képkockát az előzőhöz állítjuk be a következő ciklusban
-    prev_gray = frame_gray.copy()
-    prev_points = curr_points
+    prev_image = frame_gray
 
 # Sebességplot készítése
 plt.figure(figsize=(10, 5))
-plt.plot(range(10), velocities_x, label='X irányú sebesség')
-plt.plot(range(10), velocities_y, label='Y irányú sebesség')
+plt.plot(range(len(velocities_x)), velocities_x, label='X irányú sebesség')
+plt.plot(range(len(velocities_y)), velocities_y, label='Y irányú sebesség')
 plt.xlabel('Képkocka sorszáma')
 plt.ylabel('Sebesség (pixelek/s)')
 plt.legend()
-plt.title('Sebességplot az első 10 képkockára')
+plt.title('Sebességplot a képsorozatra')
 plt.grid(True)
 
 # Plot megjelenítése
 plt.show()
-
-# Videókapcsolat bezárása
-cap.release()
-cv2.destroyAllWindows()
