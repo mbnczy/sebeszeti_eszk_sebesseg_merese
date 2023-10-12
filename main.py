@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import glob
 import os
 
 # %%
@@ -27,10 +26,6 @@ if not os.path.exists(image_sequence_path):
 velocities_x = []
 velocities_y = []
 
-# Képsorozat feldolgozása
-image_files =  glob.glob(os.path.join(image_sequence_path, image_extension))
-image_files
-
 # %%
 prev_image = None
 
@@ -47,7 +42,17 @@ for i in range(10):  # Csak az első 10 képet dolgozzuk fel (000.png-től 009.p
 
     # Az optikai áramlás kiszámítása a képeken
     if prev_image is not None:
-        flow = cv2.calcOpticalFlowFarneback(prev_image, frame_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        flow = cv2.calcOpticalFlowFarneback(
+            prev_image,
+            frame_gray,
+            None,
+            0.5, 
+            3, 
+            15, 
+            3, 
+            5, 
+            1.2, 
+            0)
         vx = np.mean(flow[..., 0])
         vy = np.mean(flow[..., 1])
         velocities_x.append(vx)
